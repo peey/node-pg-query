@@ -11,8 +11,6 @@ try {
 }
 
 var ok = require('okay');
-var when = require('when');
-var nodefn = require('when/node');
 var util = require('util')
 
 var Query = function() {
@@ -39,10 +37,17 @@ var query = module.exports = function(text, values, cb) {
   }
 
 
-  var defer;
+  var promise;
   if(typeof cb === 'undefined' && !q.submit) {
-    defer = when.defer();
-    cb = nodefn.createCallback(defer.resolver);
+    promise = new Promise(function (resolve, reject) {
+	  cb = function (err, result) {
+	    if(err) {
+          reject(err);
+		} else {
+		  resolve(result);
+		}
+	  };
+	});
   }
 
   (query.pg || pg).connect(query.connectionParameters, ok(cb, function(client, done) {
@@ -57,8 +62,8 @@ var query = module.exports = function(text, values, cb) {
     var qry = client.query(q, ok(onError, onSuccess));
     query.before(qry, client);
   }));
-  if(defer) {
-    return defer.promise;
+  if(promise) {
+    return promise;
   }
   return q;
 };
